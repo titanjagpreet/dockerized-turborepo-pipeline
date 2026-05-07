@@ -1,159 +1,270 @@
-# Turborepo starter
+# Dockerized Turborepo Pipeline
 
-This Turborepo starter is maintained by the Turborepo core team.
+A fully dockerized Turborepo-based monorepo containing:
 
-## Using this example
+* Next.js frontend
+* Express HTTP server
+* WebSocket server
+* Shared Prisma package
+* PostgreSQL database
+* Docker Compose orchestration
 
-Run the following command:
+The project is structured as a production-style multi-service setup using isolated containers, internal Docker networking, persistent database volumes, and Prisma migrations.
 
-```sh
-npx create-turbo@latest
+---
+
+## Tech Stack
+
+### Frontend
+
+* [Next.js](https://nextjs.org)
+* React
+* TypeScript
+
+### Backend
+
+* [Express.js](https://expressjs.com)
+* WebSocket server
+* JWT Authentication
+* bcrypt
+
+### Monorepo
+
+* [Turborepo](https://turbo.build/repo)
+* [pnpm](https://pnpm.io)
+
+### Database
+
+* [PostgreSQL](https://www.postgresql.org)
+* [Prisma ORM](https://www.prisma.io)
+
+### DevOps
+
+* [Docker](https://www.docker.com)
+* [Docker Compose](https://docs.docker.com/compose)
+
+---
+
+# Project Structure
+
+```txt
+.
+├── apps
+│   ├── web
+│   ├── http-server
+│   └── ws-server
+│
+├── packages
+│   ├── prisma
+│   ├── ui
+│   ├── typescript-config
+│   └── eslint-config
+│
+├── docker
+│   ├── Dockerfile.web
+│   ├── Dockerfile.http
+│   └── Dockerfile.ws
+│
+├── docker-compose.yml
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+# Services
 
-### Apps and Packages
+| Service     | Port | Description         |
+| ----------- | ---- | ------------------- |
+| web         | 3000 | Next.js frontend    |
+| http-server | 3001 | Express API server  |
+| ws-server   | 3003 | WebSocket server    |
+| postgres    | 5432 | PostgreSQL database |
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+---
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+# Features
 
-### Utilities
+* Monorepo architecture using Turborepo
+* Shared Prisma client package
+* Separate Dockerfiles for each service
+* Docker Compose orchestration
+* Internal Docker networking
+* Persistent PostgreSQL volume
+* Automatic Prisma migration deployment
+* Healthcheck-based service dependency management
+* Production Next.js build
+* Workspace dependency management with pnpm
 
-This Turborepo has some additional tools already setup for you:
+---
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+# Environment Variables
 
-### Build
+Create a `.env` file at the project root.
 
-To build all apps and packages, run the following command:
+Example:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```env
+DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/postgres?schema=public
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+# Running the Project
+
+## Using Docker Compose
+
+Build and start all services:
+
+```bash
+docker compose up --build
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Run in detached mode:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+docker compose up -d --build
 ```
 
-Without global `turbo`:
+Stop containers:
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+docker compose down
 ```
 
-### Develop
+Remove containers along with volumes:
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+docker compose down -v
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
+# Docker Architecture
+
+The application uses:
+
+* Dedicated containers for each service
+* Internal Docker network for inter-service communication
+* Named Docker volume for PostgreSQL persistence
+
+### Internal Networking
+
+Services communicate internally using Docker DNS.
+
+Example:
+
+```txt
+postgres:5432
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+instead of localhost.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+---
 
-```sh
-turbo dev --filter=web
+# Database Persistence
+
+PostgreSQL data is persisted using a named Docker volume:
+
+```yaml
+volumes:
+  postgres_data:
 ```
 
-Without global `turbo`:
+This ensures database data survives container restarts.
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+---
+
+# Prisma Migration Flow
+
+During container startup:
+
+1. PostgreSQL container starts
+2. Healthcheck verifies database readiness
+3. Prisma migrations are deployed
+4. Application services start
+
+Migration command:
+
+```bash
+prisma migrate deploy
 ```
 
-### Remote Caching
+---
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+# Development Notes
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+### Next.js Build-Time Database Access
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+The frontend uses:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```ts
+export const dynamic = "force-dynamic";
 ```
 
-Without global `turbo`, use your package manager:
+to avoid Prisma database access during static build generation inside Docker builds.
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
+---
+
+# Useful Commands
+
+### View running containers
+
+```bash
+docker ps
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### View images
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
+```bash
+docker images
 ```
 
-Without global `turbo`:
+### View logs
 
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
+```bash
+docker compose logs
 ```
 
-## Useful Links
+### Rebuild containers
 
-Learn more about the power of Turborepo:
+```bash
+docker compose up --build
+```
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+### Remove unused Docker resources
+
+```bash
+docker system prune -a
+```
+
+---
+
+# Current Status
+
+* Dockerized multi-service setup completed
+* PostgreSQL persistence configured
+* Prisma migrations working
+* Compose networking working
+* Production builds working
+* Services communicating successfully
+
+---
+
+# Future Improvements
+
+* GitHub Actions CI/CD pipeline
+* EC2 deployment
+* Reverse proxy with Nginx
+* HTTPS setup
+* Image size optimization using multi-stage builds
+* Turbo build caching optimization
+* Container registry publishing
+* Production monitoring/logging
+
+---
+
+# License
+
+MIT
