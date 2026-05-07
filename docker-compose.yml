@@ -1,0 +1,70 @@
+services:
+  
+  turbo-http:
+    image: turbo-http
+    container_name: turbo-http
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.http
+    ports:
+      - 3001:3001
+    environment:
+      DATABASE_URL: postgresql://postgres:mysecretpassword@postgres:5432/postgres?schema=public
+    networks:
+      - turbo-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  turbo-web:
+    image: turbo-web
+    container_name: turbo-web
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - 3000:3000
+    environment:
+      DATABASE_URL: postgresql://postgres:mysecretpassword@postgres:5432/postgres?schema=public
+    networks:
+      - turbo-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  turbo-ws:
+    image: turbo-ws
+    container_name: turbo-ws
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ws
+    ports:
+      - 3003:3003
+    environment:
+      DATABASE_URL: postgresql://postgres:mysecretpassword@postgres:5432/postgres?schema=public
+    networks:
+      - turbo-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+  postgres:
+    image: postgres
+    container_name: turbo-postgres
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+    networks:
+      - turbo-net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  turbo-net:
+
+volumes:
+  postgres_data:
