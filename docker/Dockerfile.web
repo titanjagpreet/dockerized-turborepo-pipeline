@@ -18,6 +18,9 @@ RUN pnpm install
 
 COPY . .
 
+ARG DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV DATABASE_URL=$DATABASE_URL
+
 RUN pnpm --filter @repo/prisma run db:generate
 RUN pnpm --filter @repo/prisma run build
 
