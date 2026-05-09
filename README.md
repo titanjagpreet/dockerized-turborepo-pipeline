@@ -76,12 +76,15 @@ The project is structured as a multi-service containerized architecture using is
 │       ├── frontend.yml
 │       ├── backend.yml
 │       └── ws.yml
+├── nginx-conf
+│   └── nginx.conf
 │
 ├── docker-compose.yml
 ├── nginx.conf
 ├── turbo.json
 ├── pnpm-workspace.yaml
 └── package.json
+└── .npmrc
 ```
 
 ---
