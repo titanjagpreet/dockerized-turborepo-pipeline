@@ -1,47 +1,53 @@
-# Dockerized Turborepo Pipeline
+# Dockerized Turborepo CI/CD Infrastructure
 
-A fully dockerized Turborepo-based monorepo containing:
+A production-style Dockerized Turborepo monorepo containing:
 
 * Next.js frontend
-* Express HTTP server
+* Express HTTP API server
 * WebSocket server
 * Shared Prisma package
 * PostgreSQL database
-* Docker Compose orchestration
+* Nginx reverse proxy
+* Independent CI/CD pipelines using GitHub Actions
+* Automated Docker Hub deployments
 
-The project is structured as a production-style multi-service setup using isolated containers, internal Docker networking, persistent database volumes, and Prisma migrations.
+The project is structured as a multi-service containerized architecture using isolated Docker containers, internal Docker networking, persistent PostgreSQL volumes, reverse proxy routing, and automated remote deployments to a Linux VM.
 
 ---
 
-## Tech Stack
+# Tech Stack
 
-### Frontend
+## Frontend
 
-* [Next.js](https://nextjs.org)
+* Next.js
 * React
 * TypeScript
 
-### Backend
+## Backend
 
-* [Express.js](https://expressjs.com)
+* Express.js
 * WebSocket server
 * JWT Authentication
 * bcrypt
 
-### Monorepo
+## Monorepo
 
-* [Turborepo](https://turbo.build/repo)
-* [pnpm](https://pnpm.io)
+* Turborepo
+* pnpm
 
-### Database
+## Database
 
-* [PostgreSQL](https://www.postgresql.org)
-* [Prisma ORM](https://www.prisma.io)
+* PostgreSQL
+* Prisma ORM
 
-### DevOps
+## DevOps / Infrastructure
 
-* [Docker](https://www.docker.com)
-* [Docker Compose](https://docs.docker.com/compose)
+* Docker
+* Docker Compose
+* GitHub Actions
+* Docker Hub
+* Nginx
+* Certbot / Let's Encrypt
 
 ---
 
@@ -65,7 +71,14 @@ The project is structured as a production-style multi-service setup using isolat
 │   ├── Dockerfile.http
 │   └── Dockerfile.ws
 │
+├── .github
+│   └── workflows
+│       ├── frontend.yml
+│       ├── backend.yml
+│       └── ws.yml
+│
 ├── docker-compose.yml
+├── nginx.conf
 ├── turbo.json
 ├── pnpm-workspace.yaml
 └── package.json
@@ -73,29 +86,55 @@ The project is structured as a production-style multi-service setup using isolat
 
 ---
 
+# Architecture Overview
+
+```txt
+Internet
+   ↓
+Nginx Reverse Proxy
+   ↓
+──────────────────────────────
+Frontend     → localhost:3000
+HTTP Server  → localhost:3001
+WS Server    → localhost:3003
+──────────────────────────────
+   ↓
+Docker Network
+   ↓
+PostgreSQL Container
+```
+
+---
+
 # Services
 
-| Service     | Port | Description         |
-| ----------- | ---- | ------------------- |
-| web         | 3000 | Next.js frontend    |
-| http-server | 3001 | Express API server  |
-| ws-server   | 3003 | WebSocket server    |
-| postgres    | 5432 | PostgreSQL database |
+| Service     | Port     | Description         |
+| ----------- | -------- | ------------------- |
+| web         | 3000     | Next.js frontend    |
+| http-server | 3001     | Express API server  |
+| ws-server   | 3003     | WebSocket server    |
+| postgres    | 5432     | PostgreSQL database |
+| nginx       | 80 / 443 | Reverse proxy       |
 
 ---
 
 # Features
 
-* Monorepo architecture using Turborepo
-* Shared Prisma client package
+* Turborepo monorepo architecture
+* Shared Prisma package
 * Separate Dockerfiles for each service
-* Docker Compose orchestration
+* Independent Docker-based deployments
+* SHA-tagged Docker image versioning
+* GitHub Actions CI/CD pipelines
+* Automated Docker Hub image publishing
+* Automated VM deployments over SSH
+* Nginx reverse proxy setup
+* HTTPS setup using Certbot
 * Internal Docker networking
 * Persistent PostgreSQL volume
 * Automatic Prisma migration deployment
-* Healthcheck-based service dependency management
-* Production Next.js build
-* Workspace dependency management with pnpm
+* Production Next.js builds
+* Workspace dependency management using pnpm
 
 ---
 
@@ -111,29 +150,45 @@ DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/postgres?schem
 
 ---
 
-# Running the Project
+# Local Development Setup
 
-## Using Docker Compose
+## Prerequisites
 
-Build and start all services:
+Install:
+
+* Docker
+* Docker Compose Plugin
+
+Verify installation:
+
+```bash
+docker --version
+docker compose version
+```
+
+---
+
+# Running the Project Locally
+
+## Build and start all services
 
 ```bash
 docker compose up --build
 ```
 
-Run in detached mode:
+## Run in detached mode
 
 ```bash
 docker compose up -d --build
 ```
 
-Stop containers:
+## Stop containers
 
 ```bash
 docker compose down
 ```
 
-Remove containers along with volumes:
+## Remove containers along with volumes
 
 ```bash
 docker compose down -v
@@ -146,12 +201,15 @@ docker compose down -v
 The application uses:
 
 * Dedicated containers for each service
-* Internal Docker network for inter-service communication
+* Internal Docker networking
 * Named Docker volume for PostgreSQL persistence
+* Independent service deployment pipelines
 
-### Internal Networking
+---
 
-Services communicate internally using Docker DNS.
+# Internal Networking
+
+Containers communicate internally using Docker DNS.
 
 Example:
 
@@ -172,7 +230,11 @@ volumes:
   postgres_data:
 ```
 
-This ensures database data survives container restarts.
+This ensures database data survives:
+
+* container recreation
+* container restarts
+* deployments
 
 ---
 
@@ -181,9 +243,9 @@ This ensures database data survives container restarts.
 During container startup:
 
 1. PostgreSQL container starts
-2. Healthcheck verifies database readiness
+2. Application container starts
 3. Prisma migrations are deployed
-4. Application services start
+4. Service starts accepting requests
 
 Migration command:
 
@@ -193,75 +255,171 @@ prisma migrate deploy
 
 ---
 
-# Development Notes
+# CI/CD Pipeline
 
-### Next.js Build-Time Database Access
+Each service has an independent GitHub Actions workflow.
 
-The frontend uses:
+Workflows:
 
-```ts
-export const dynamic = "force-dynamic";
+```txt
+.github/workflows/
+├── backend.yml
+├── frontend.yml
+└── ws.yml
 ```
 
-to avoid Prisma database access during static build generation inside Docker builds.
+Each workflow performs:
+
+1. Repository checkout
+2. Docker image build
+3. Docker Hub push
+4. Remote VM deployment over SSH
+5. Container recreation using latest SHA-tagged image
+
+---
+
+# Docker Image Strategy
+
+Images are published using:
+
+```txt
+titanxbt/service-name:${github.sha}
+```
+
+and:
+
+```txt
+titanxbt/service-name:latest
+```
+
+This provides:
+
+* immutable deployments
+* rollback capability
+* deployment traceability
+
+---
+
+# Reverse Proxy Setup
+
+Nginx routes incoming requests to internal containers.
+
+Example:
+
+| Domain          | Target Service   |
+| --------------- | ---------------- |
+| fe.domain.com   | Frontend         |
+| http.domain.com | HTTP API         |
+| ws.domain.com   | WebSocket server |
+
+---
+
+# HTTPS
+
+HTTPS is configured using:
+
+* Certbot
+* Let's Encrypt
+
+SSL certificates are automatically installed and managed by Nginx.
 
 ---
 
 # Useful Commands
 
-### View running containers
+## View running containers
 
 ```bash
 docker ps
 ```
 
-### View images
+## View images
 
 ```bash
 docker images
 ```
 
-### View logs
+## View logs
 
 ```bash
-docker compose logs
+docker logs <container-name>
 ```
 
-### Rebuild containers
+## Rebuild images
 
 ```bash
 docker compose up --build
 ```
 
-### Remove unused Docker resources
+## Remove unused Docker resources
 
 ```bash
 docker system prune -a
+```
+
+## View Docker networks
+
+```bash
+docker network ls
+```
+
+## View Docker volumes
+
+```bash
+docker volume ls
+```
+
+---
+
+# Production Deployment Flow
+
+```txt
+Git Push
+   ↓
+GitHub Actions
+   ↓
+Docker Image Build
+   ↓
+Docker Hub Push
+   ↓
+SSH into VM
+   ↓
+Docker Pull
+   ↓
+Container Recreation
+   ↓
+Live Deployment
 ```
 
 ---
 
 # Current Status
 
-* Dockerized multi-service setup completed
+* Multi-service Docker architecture completed
+* Independent CI/CD pipelines configured
+* Docker Hub integration working
+* Automated VM deployments working
 * PostgreSQL persistence configured
 * Prisma migrations working
-* Compose networking working
-* Production builds working
+* Internal Docker networking working
+* Nginx reverse proxy configured
+* HTTPS enabled using Certbot
+* SHA-based image deployments working
 * Services communicating successfully
 
 ---
 
 # Future Improvements
 
-* GitHub Actions CI/CD pipeline
-* EC2 deployment
-* Reverse proxy with Nginx
-* HTTPS setup
-* Image size optimization using multi-stage builds
-* Turbo build caching optimization
-* Container registry publishing
-* Production monitoring/logging
+* Multi-stage Docker builds
+* Image size optimization
+* Turbo remote caching
+* Deployment staging environment
+* Container monitoring and logging
+* Prometheus and Grafana integration
+* Blue-green deployments
+* Kubernetes migration
+* Infrastructure as Code using Terraform
 
 ---
 
